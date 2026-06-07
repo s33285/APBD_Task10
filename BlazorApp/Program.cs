@@ -9,7 +9,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddHttpClient<StudentsApiClient>(client =>
 {
     client.BaseAddress = new Uri(
-        builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7001");
+        builder.Configuration["ApiBaseUrl"] ?? "http://localhost:6001");
 });
 
 builder.Services.AddScoped<ObservedStudentsState>();

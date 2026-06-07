@@ -1,0 +1,43 @@
+﻿@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<button class="btn btn-sm btn-outline-secondary" @onclick="CopyAsync">  Copy Email </button>
+
+@if (_copied)
+{
+    <span class="ms-2 text-success">Copied!</span>
+}
+
+@code {
+    [Parameter] public string Email { get; set; } = "";
+    private IJSObjectReference? _module;
+    private bool _copied;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "/js/clipboard.js");
+        }
+    }
+
+    private async Task CopyAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("copyToClipboard", Email);
+            _copied = true;
+            StateHasChanged();
+            await Task.Delay(2000);
+            _copied = false;
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+            await _module.DisposeAsync();
+    }
+}

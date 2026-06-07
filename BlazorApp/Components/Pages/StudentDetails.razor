@@ -1,0 +1,167 @@
+﻿@page "/students/{Id:int}"
+@rendermode InteractiveServer
+@inject StudentsApiClient Api
+@inject ObservedStudentsState ObservedState
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<ErrorBoundary>
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingPanel Message="Loading student..." />
+        }
+        else if (_student is null)
+        {
+            <ApiError Message="Student not found." />
+        }
+        else
+        {
+            <h3>@_student.FirstName @_student.LastName</h3>
+            <p><strong>Index:</strong> @_student.IndexNumber</p>
+            <p>
+                <strong>Email:</strong> @_student.Email
+                <CopyEmailButton Email="@_student.Email" />
+            </p>
+            <p><strong>Semester:</strong> @_student.Semester</p>
+
+            <div class="mb-3">
+                @if (ObservedState.IsObserved(_student.Id))
+                {
+                    <button class="btn btn-warning btn-sm"
+                            @onclick="RemoveFromObservedAsync">
+                        Remove from observed
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-outline-warning btn-sm"
+                            @onclick="AddToObserved">
+                        Observe
+                    </button>
+                }
+            </div>
+
+            <h5>Assigned Courses</h5>
+            @if (_courses.Count == 0)
+            {
+                <p>No courses assigned.</p>
+            }
+            else
+            {
+                <DataTable Items="_courses" TItem="CourseDto">
+                    <Header>
+                        <th>Name</th>
+                        <th>ECTS</th>
+                    </Header>
+                    <Row Context="course">
+                        <td>@course.Name</td>
+                        <td>@course.Ects</td>
+                    </Row>
+                </DataTable>
+            }
+
+            <h5 class="mt-4">Assign a Course</h5>
+            <EditForm Model="_assignDto" OnValidSubmit="AssignCourseAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-2">
+                    <label>Course</label>
+                    <InputSelect @bind-Value="_assignDto.CourseId"
+                                 class="form-select">
+                        <option value="0">-- select a course --</option>
+                        @foreach (var c in _allCourses)
+                        {
+                            <option value="@c.Id">@c.Name (@c.Ects ECTS)</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => _assignDto.CourseId)" />
+                </div>
+
+                <button type="submit" class="btn btn-success btn-sm">
+                    Assign
+                </button>
+
+                @if (_assignSuccess)
+                {
+                    <span class="text-success ms-2">Course assigned!</span>
+                }
+            </EditForm>
+        }
+    </ChildContent>
+    <ErrorContent>
+        <ApiError Message="Error loading student details." />
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private int _previousId;
+
+    private StudentDto? _student;
+    private List<CourseDto> _courses = new();
+    private List<CourseDto> _allCourses = new();
+    private AssignCourseDto _assignDto = new();
+    private bool _loading = true;
+    private bool _assignSuccess;
+    private IJSObjectReference? _jsModule;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _allCourses = await Api.GetCoursesAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id == _previousId) return;
+        _previousId = Id;
+        _loading = true;
+        _student = await Api.GetStudentAsync(Id);
+        if (_student is not null)
+            _courses = await Api.GetStudentCoursesAsync(Id);
+        _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "/js/clipboard.js");
+        }
+    }
+
+    private void AddToObserved()
+    {
+        if (_student is not null)
+            ObservedState.Add(_student);
+    }
+
+    private async Task RemoveFromObservedAsync()
+    {
+        if (_student is null || _jsModule is null) return;
+        var confirmed = await _jsModule.InvokeAsync<bool>(
+            "confirmRemove",
+            $"{_student.FirstName} {_student.LastName}");
+        if (confirmed)
+            ObservedState.Remove(_student.Id);
+    }
+
+    private async Task AssignCourseAsync()
+    {
+        await Api.AssignCourseAsync(Id, _assignDto);
+        _courses = await Api.GetStudentCoursesAsync(Id);
+        _assignDto = new();
+        _assignSuccess = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _assignSuccess = false;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is not null)
+            await _jsModule.DisposeAsync();
+    }
+}

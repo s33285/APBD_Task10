@@ -1,0 +1,12 @@
+﻿<div class="alert alert-danger">
+    <strong>Error:</strong> @Message
+    @if (OnRetry.HasDelegate)
+    {
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="OnRetry"> Retry </button>
+    }
+</div>
+
+@code {
+    [Parameter] public string Message { get; set; } = "An error occurred";
+    [Parameter] public EventCallback OnRetry { get; set; }
+}

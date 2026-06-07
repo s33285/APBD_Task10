@@ -1,0 +1,55 @@
+﻿@page "/students/create"
+@rendermode InteractiveServer
+@inject StudentsApiClient Api
+@inject NavigationManager Nav
+
+<h3>Create Student</h3>
+
+<EditForm Model="_dto" OnValidSubmit="HandleSubmitAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-2">
+        <label>Index Number</label>
+        <InputText @bind-Value="_dto.IndexNumber" class="form-control" />
+        <ValidationMessage For="@(() => _dto.IndexNumber)" />
+    </div>
+
+    <div class="mb-2">
+        <label>First Name</label>
+        <InputText @bind-Value="_dto.FirstName" class="form-control" />
+        <ValidationMessage For="@(() => _dto.FirstName)" />
+    </div>
+
+    <div class="mb-2">
+        <label>Last Name</label>
+        <InputText @bind-Value="_dto.LastName" class="form-control" />
+        <ValidationMessage For="@(() => _dto.LastName)" />
+    </div>
+
+    <div class="mb-2">
+        <label>Email</label>
+        <InputText @bind-Value="_dto.Email" class="form-control" />
+        <ValidationMessage For="@(() => _dto.Email)" />
+    </div>
+
+    <div class="mb-2">
+        <label>Semester (1-8)</label>
+        <InputNumber @bind-Value="_dto.Semester" class="form-control" />
+        <ValidationMessage For="@(() => _dto.Semester)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a class="btn btn-secondary ms-2" href="/students">Cancel</a>
+</EditForm>
+
+@code {
+    private CreateStudentDto _dto = new();
+
+    private async Task HandleSubmitAsync()
+    {
+        var created = await Api.CreateStudentAsync(_dto);
+        if (created is not null)
+            Nav.NavigateTo($"/students/{created.Id}");
+    }
+}

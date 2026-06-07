@@ -1,0 +1,50 @@
+﻿@page "/observed"
+@rendermode InteractiveServer
+@inject ObservedStudentsState ObservedState
+@implements IDisposable
+
+<h3>
+    Observed Students
+    <span class="badge bg-warning text-dark ms-2">
+        @ObservedState.Observed.Count
+    </span>
+</h3>
+
+@if (ObservedState.Observed.Count == 0)
+{
+    <p>No observed students.</p>
+}
+else
+{
+    <DataTable Items="ObservedState.Observed" TItem="StudentDto">
+        <Header>
+            <th>Index</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th></th>
+        </Header>
+        <Row Context="student">
+            <td>@student.IndexNumber</td>
+            <td>@student.FirstName @student.LastName</td>
+            <td>@student.Email</td>
+            <td>
+                <button class="btn btn-sm btn-danger"
+                        @onclick="@(() => ObservedState.Remove(student.Id))">
+                    Remove
+                </button>
+            </td>
+        </Row>
+    </DataTable>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        ObservedState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ObservedState.OnChange -= StateHasChanged;
+    }
+}

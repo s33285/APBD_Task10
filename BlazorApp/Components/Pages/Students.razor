@@ -1,0 +1,81 @@
+﻿@page "/students"
+@rendermode InteractiveServer
+@inject StudentsApiClient Api
+@inject NavigationManager Nav
+
+<h3>Students</h3>
+
+<button class="btn btn-primary mb-3"
+        @onclick="@(() => Nav.NavigateTo("/students/create"))">
+    + New student
+</button>
+
+<ErrorBoundary>
+    <ChildContent>
+        @if (_loading)
+        {
+            <LoadingPanel Message="Loading students..." />
+        }
+        else if (_error)
+        {
+            <ApiError Message="Could not load the student list from the API."
+                      OnRetry="LoadAsync" />
+        }
+        else
+        {
+            <DataTable Items="_students" TItem="StudentDto">
+                <Header>
+                    <th>Index</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Semester</th>
+                    <th class="text-end">Actions</th>
+                </Header>
+                <Row Context="student">
+                    <td>@student.IndexNumber</td>
+                    <td>@student.FirstName @student.LastName</td>
+                    <td>@student.Email</td>
+                    <td>@student.Semester</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary"
+                           href="/students/@student.Id">
+                            Details
+                        </a>
+                    </td>
+                </Row>
+            </DataTable>
+        }
+    </ChildContent>
+    <ErrorContent>
+        <ApiError Message="Unexpected error displaying student list." />
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private List<StudentDto> _students = new();
+    private bool _loading = true;
+    private bool _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = false;
+        try
+        {
+            _students = await Api.GetStudentsAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
